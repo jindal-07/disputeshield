@@ -13,6 +13,7 @@ export type PurchaseIntent = {
   chosenSku: string;
   agentReasoning: string;
   approvedByHumanAt?: string;
+  complaint?: string; // what the human told their agent went wrong (shared in negotiation)
   createdAt: string;
 };
 
@@ -78,7 +79,7 @@ type DB = {
 
 function load(): DB {
   try {
-    return JSON.parse(fs.readFileSync(FILE, "utf8")) as DB;
+    return JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ FILE, "utf8")) as DB;
   } catch {
     return { orders: {}, intents: {}, disputes: {} };
   }

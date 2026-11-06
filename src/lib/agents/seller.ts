@@ -7,6 +7,7 @@ import * as pp from "../paypal";
 import { read, update, now, findOrderForDispute, logAction, type Assessment } from "../store";
 import { getProduct, SHOP_NAME } from "../catalog";
 import { sellerHealth } from "../health";
+import { humanize } from "../format";
 
 const SYSTEM = `You are DisputeShield, the dispute-defence agent for "${SHOP_NAME}", a small online apparel shop that takes payments through PayPal.
 
@@ -122,7 +123,7 @@ export async function assessDispute(disputeId: string): Promise<Assessment> {
       },
     ],
     max_iterations: 12,
-  } as Parameters<ReturnType<typeof claude>["beta"]["messages"]["toolRunner"]>[0]);
+  });
 
   if (!result) throw new Error("Seller agent finished without submitting an assessment");
   const assessment: Assessment = result;
@@ -132,7 +133,7 @@ export async function assessDispute(disputeId: string): Promise<Assessment> {
   });
   logAction(disputeId, {
     actor: "Seller agent",
-    action: `Assessed: ${assessment.recommendedAction}`,
+    action: `Recommends ${humanize(assessment.recommendedAction)}`,
     detail: assessment.summary,
     ok: true,
   });
@@ -150,12 +151,17 @@ export function trimDispute(d: pp.PayPalDispute) {
     amount: d.dispute_amount,
     created: d.create_time,
     seller_response_due_date: d.seller_response_due_date,
+    state: d.dispute_state,
     transactions: d.disputed_transactions?.map((t) => ({
       seller_transaction_id: t.seller_transaction_id,
       gross_amount: t.gross_amount,
       items: t.items,
+      paypal_seller_protection_eligible: t.seller_protection_eligible,
+      paypal_seller_protection_type: t.seller_protection_type,
     })),
     messages: d.messages,
+    buyer_evidence: d.evidences?.filter((e) => e.source === "SUBMITTED_BY_BUYER").map((e) => e.notes),
+    seller_actions_allowed_now: pp.allowedActions(d),
     outcome: d.dispute_outcome,
   };
 }

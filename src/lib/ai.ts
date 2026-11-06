@@ -8,9 +8,11 @@ export function claude() {
   return client;
 }
 
+type Effort = "low" | "medium" | "high" | "xhigh" | "max";
+
 /**
  * Shared request settings for every agent call.
- * - effort "medium" keeps the demo snappy; raise to "high" for harder disputes.
+ * - effort "medium" keeps the demo snappy; set CLAUDE_EFFORT=high for harder disputes.
  * - Server-side refusal fallbacks are on by default (CLAUDE_FALLBACKS=off to disable).
  */
 export function baseParams() {
@@ -18,7 +20,7 @@ export function baseParams() {
   return {
     model: MODEL,
     max_tokens: 16000,
-    output_config: { effort: (process.env.CLAUDE_EFFORT ?? "medium") as "low" | "medium" | "high" },
-    ...(fallbacksOn ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" } : {}),
+    output_config: { effort: (process.env.CLAUDE_EFFORT ?? "medium") as Effort },
+    ...(fallbacksOn ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
   };
 }

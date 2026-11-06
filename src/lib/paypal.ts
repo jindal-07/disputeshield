@@ -149,16 +149,39 @@ export type PayPalDispute = {
     buyer_transaction_id?: string;
     gross_amount?: Money;
     custom?: string;
-    items?: { item_description?: string; item_quantity?: string; reason?: string; notes?: string }[];
+    items?: { item_id?: string; item_name?: string; item_description?: string; item_quantity?: string; reason?: string; notes?: string }[];
+    seller_protection_eligible?: boolean;
+    seller_protection_type?: string;
   }[];
+  evidences?: { evidence_type: string; notes?: string; source?: string; date?: string }[];
   messages?: { posted_by: string; time_posted: string; content: string }[];
   offer?: unknown;
   dispute_outcome?: { outcome_code: string; amount_refunded?: Money };
   links?: { href: string; rel: string; method: string }[];
 };
 
-export function listDisputes() {
-  return paypal<{ items?: PayPalDispute[] }>("/v1/customer/disputes?page_size=50");
+/**
+ * Lists disputes from the last 179 days (buyers can dispute up to 180 days after payment;
+ * PayPal rejects a start_time of 180+ days with INVALID_START_TIME_RANGE).
+ * PayPal's list endpoint omits some disputes (e.g. ones under PayPal review) unless
+ * start_time is passed explicitly, so always send it.
+ */
+export async function listDisputes() {
+  const since = new Date(Date.now() - 179 * 86400_000).toISOString();
+  const items: PayPalDispute[] = [];
+  let path: string | null = `/v1/customer/disputes?page_size=50&start_time=${encodeURIComponent(since)}`;
+  for (let page = 0; path && page < 10; page++) {
+    const res: { items?: PayPalDispute[]; links?: { rel: string; href: string }[] } = await paypal(path);
+    items.push(...(res.items ?? []));
+    const next = res.links?.find((l) => l.rel === "next")?.href;
+    path = next ? next.replace(BASE, "") : null;
+  }
+  return { items };
+}
+
+/** The POST actions PayPal currently allows on a dispute (e.g. "make_offer", "provide_evidence"). */
+export function allowedActions(d: PayPalDispute): string[] {
+  return (d.links ?? []).filter((l) => l.method === "POST").map((l) => l.rel);
 }
 
 export function getDispute(id: string) {
