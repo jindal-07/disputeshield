@@ -1,0 +1,29 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Deploy: Render dashboard → New → Blueprint → pick this repo. Fill the secret values when prompted.
+services:
+  - type: web
+    name: disputeshield
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/config
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CLAUDE_MODEL
+        value: claude-sonnet-5-5
+      - key: AGENT_RUNS_PER_HOUR
+        value: "40"

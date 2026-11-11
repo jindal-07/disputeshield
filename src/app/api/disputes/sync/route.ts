@@ -8,7 +8,8 @@ export async function POST() {
   try {
     const fresh = await syncFromPayPal();
     const unassessed = Object.values(read().disputes)
-      .filter((d) => !d.assessment)
+      // auto-assess only disputes never attempted; failed ones wait for a manual "Run seller agent"
+      .filter((d) => !d.assessment && !d.log.some((l) => l.action === "Assessment failed"))
       .map((d) => d.id);
     after(async () => {
       for (const id of unassessed) await runAssessment(id);
